@@ -10,6 +10,7 @@
 		ros::Publisher chatter_pub = n.advertise<sensor_msgs::Imu >("imu/data_raw", 1000);
 		ros::Rate loop_rate(1);
 		int ax,ay,az,vx,vy,vz;
+		
 			while (ros::ok())
 			{
 				srand( time(0));
@@ -34,7 +35,9 @@
 				imu_msg.linear_acceleration.x = ax;
 				imu_msg.linear_acceleration.y = ay;
 				imu_msg.linear_acceleration.z = az;
+				
 				chatter_pub.publish(imu_msg);
+				
 				//ROS_INFO("%s", "send an imu message");
 				ros::spinOnce();
 				loop_rate.sleep();
