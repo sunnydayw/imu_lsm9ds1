@@ -1,0 +1,66 @@
+#include <Wire.h>
+#include <SPI.h>
+#include <SparkFunLSM9DS1.h>
+LSM9DS1 imu;
+#define LSM9DS1_M  0x1E // Would be 0x1C if SDO_M is LOW
+#define LSM9DS1_AG  0x6B // Would be 0x6A if SDO_AG is LOW
+#define DECLINATION -8.58 // Declination (degrees) in Boulder, CO.
+//https://gist.github.com/Zymotico/836c5d82d5b52a2a3695
+void setup() 
+{
+  Serial.begin(9600);
+  imu.settings.device.commInterface = IMU_MODE_I2C;
+  imu.settings.device.mAddress = LSM9DS1_M;
+  imu.settings.device.agAddress = LSM9DS1_AG;
+  imu.begin();
+}
+
+void loop()
+{
+  kalmanFilter();
+  //Serial.println(imu.calcAccel(imu.ax));
+  printKalman();
+}
+
+// kalman variables
+float varVolt = 0.00001462894629;
+//float varVolt = 0.00001397923102;  // variance determined using excel and reading samples of raw sensor data
+float varProcess = 1e-6;
+float Pc = 0.0;
+float G = 0.0;
+float P = 1.0;
+
+float Xp = 0.0;
+float Zp = 0.0;
+float Xe = 0.0;
+int sensorVal = 0;
+int lastValue_ = 0;
+
+void kalmanFilter() {
+  imu.readGyro();
+  sensorVal = imu.calcGyro(imu.gx);     // read the value on AnalogIn pin 0 and store it in a variable
+  //imu.readAccel();
+  //sensorVal = imu.calcAccel(imu.ax);
+  // kalman process
+  Pc = P + varProcess;
+  G = Pc/(Pc + varVolt);    // kalman gain
+  P = (1-G)*Pc;
+  Xp = Xe;
+  Zp = Xp;
+  Xe = G*(sensorVal-Zp)+Xp;   // the kalman estimate of the sensor voltage
+  
+}
+
+void printKalman() {
+  //PRINTING TO SERIAL
+  //Serial.print(sensorVal); Serial.print("   "); Serial.println(out);
+  // RX8 [h=43] @1Key1 @0Key1
+  int out = Xe;
+  Serial.print("C");
+  Serial.write(sensorVal>>8);
+  Serial.write(sensorVal&0xff);
+  Serial.write(out>>8);
+  Serial.write(out&0xff);
+}
+
+
